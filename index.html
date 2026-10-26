@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator Daftar Hadir Murid</title>
+<style>
+  :root {
+    --bg:#eef1ee; --card:#ffffff; --text:#14231f; --muted:#5f6f69; --line:#d9e0dc;
+    --head:#0f4c45; --head-text:#ffffff; --pri:#0f6b5f; --pri-hover:#0b564c; --pri-text:#ffffff;
+    --ok:#166534; --ok-bg:#e8f6ee; --ok-line:#9fd8b5;
+    --wait:#7a4b00; --wait-bg:#fff6e0; --wait-line:#f1d38a;
+    --err:#b42318; --err-bg:#fdecea;
+    --shadow:0 12px 32px rgba(15,50,44,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0c1512; --card:#142520; --text:#e9f2ee; --muted:#91a79f; --line:#26413a;
+      --head:#0b3a34; --head-text:#f1faf6; --pri:#2fa28f; --pri-hover:#3bb8a3; --pri-text:#06201b;
+      --ok:#7ee2a4; --ok-bg:#12301f; --ok-line:#1f5a39;
+      --wait:#f5cf7a; --wait-bg:#33280d; --wait-line:#6b5314;
+      --err:#ffb4a9; --err-bg:#3a1713;
+      --shadow:0 12px 32px rgba(0,0,0,.45);
+    }
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; min-height:100vh; display:flex; justify-content:center; align-items:flex-start; padding:28px 14px 40px;
+         background:var(--bg); color:var(--text); font-family:"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; line-height:1.45; }
+  .card { width:100%; max-width:520px; background:var(--card); border-radius:16px; box-shadow:var(--shadow); overflow:hidden; }
+  .head { background:var(--head); color:var(--head-text); padding:22px 24px 20px; }
+  .head h1 { margin:0; font-size:1.35rem; letter-spacing:-.01em; }
+  .head p { margin:4px 0 0; font-size:.92rem; opacity:.85; }
+  .badge { display:inline-block; margin-top:12px; padding:4px 12px; border-radius:999px; background:rgba(255,255,255,.16); font-size:.85rem; font-weight:600; }
+  .body { padding:22px 24px 26px; }
+  label.t { display:block; margin:18px 0 6px; font-size:.9rem; font-weight:600; }
+  label.t:first-child { margin-top:0; }
+  .hint { font-weight:400; color:var(--muted); }
+  input[type=text], select { width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:10px; font:inherit; background:transparent; color:inherit; }
+  input[type=text]:focus, select:focus { outline:3px solid color-mix(in srgb, var(--pri) 35%, transparent); border-color:var(--pri); }
+  select option { color:#14231f; background:#fff; }
+  .progress { margin:6px 0 0; font-size:.82rem; color:var(--muted); }
+
+  .seg { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .seg label { position:relative; cursor:pointer; }
+  .seg input { position:absolute; opacity:0; inset:0; cursor:pointer; }
+  .seg span { display:flex; flex-direction:column; align-items:center; padding:10px 8px; border:1.5px solid var(--line); border-radius:10px; transition:border-color .15s, background .15s; }
+  .seg small { color:var(--muted); font-size:.78rem; }
+  .seg input:checked + span { border-color:var(--pri); background:color-mix(in srgb, var(--pri) 12%, transparent); }
+  .seg input:focus-visible + span { outline:3px solid color-mix(in srgb, var(--pri) 35%, transparent); }
+
+  .box { margin-top:18px; padding:14px 16px; border-radius:12px; border:1.5px solid var(--line); background:transparent; font-size:.92rem; }
+  .box:empty { display:none; }
+  .box .tt { font-weight:700; margin-bottom:2px; }
+  .box.none { background:var(--wait-bg); border-color:var(--wait-line); color:var(--wait); }
+  .box.done { background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok); }
+  .box a { display:inline-block; margin-top:10px; padding:9px 16px; border-radius:9px; background:var(--ok); color:var(--ok-bg); font-weight:700; text-decoration:none; }
+  .box a:hover { filter:brightness(1.1); }
+
+  .btn { width:100%; margin-top:20px; padding:13px; border:0; border-radius:10px; background:var(--pri); color:var(--pri-text); font:inherit; font-size:1rem; font-weight:700; cursor:pointer; transition:background .15s; }
+  .btn:hover { background:var(--pri-hover); }
+  .btn.alt { background:transparent; color:var(--pri); border:1.5px solid var(--pri); }
+  .btn.alt:hover { background:color-mix(in srgb, var(--pri) 12%, transparent); }
+  .btn.ghost { margin-top:0; background:transparent; color:var(--text); border:1.5px solid var(--line); }
+  .msg { margin-top:14px; padding:10px 12px; border-radius:10px; font-size:.9rem; }
+  .msg:empty { display:none; }
+  .msg.err { background:var(--err-bg); color:var(--err); }
+  .msg.ok { background:var(--ok-bg); color:var(--ok); }
+  .foot { margin:16px 0 0; font-size:.8rem; color:var(--muted); text-align:center; }
+
+  .layer { position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(8,20,17,.6); backdrop-filter:blur(3px); }
+  .layer.show { display:flex; }
+  .dlg { width:100%; max-width:360px; padding:24px; border-radius:14px; background:var(--card); color:var(--text); text-align:center; box-shadow:var(--shadow); }
+  .dlg h2 { margin:0 0 8px; font-size:1.1rem; }
+  .dlg p { margin:0; font-size:.92rem; color:var(--muted); }
+  .dlg .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+  .dlg .row .btn { margin-top:0; }
+  .spin { width:38px; height:38px; margin:0 auto 14px; border:4px solid var(--line); border-top-color:var(--pri); border-radius:50%; animation:putar .9s linear infinite; }
+  @keyframes putar { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+</style>
+</head>
+<body>
+<main class="card" id="card">
+  <header class="head">
+    <h1>Generator daftar hadir murid</h1>
+    <p>SDN 01 Toto Rejo</p>
+    <span class="badge">Tahun pelajaran <span id="tahun">...</span></span>
+  </header>
+
+  <div class="body">
+    <label class="t" for="semGanjil">Semester</label>
+    <div class="seg">
+      <label><input type="radio" name="semester" id="semGanjil" value="Ganjil" checked><span><b>Ganjil</b><small>Juli - Desember</small></span></label>
+      <label><input type="radio" name="semester" value="Genap"><span><b>Genap</b><small>Januari - Juni</small></span></label>
+    </div>
+
+    <label class="t" for="kelas">Kelas / rombel</label>
+    <select id="kelas"><option value="">- Pilih kelas -</option></select>
+    <p class="progress" id="progress"></p>
+
+    <div class="box" id="info" aria-live="polite"></div>
+
+    <label class="t" for="wali">Wali kelas <span class="hint">(ketik atau pilih dari daftar)</span></label>
+    <input type="text" id="wali" list="daftarGuru" placeholder="Nama wali kelas" autocomplete="off">
+    <datalist id="daftarGuru"></datalist>
+
+    <label class="t" for="nip">NIP <span class="hint">(terisi otomatis jika guru ada di daftar)</span></label>
+    <input type="text" id="nip" placeholder="NIP wali kelas" inputmode="numeric">
+
+    <button class="btn" id="btn" type="button">Generate daftar hadir</button>
+    <div class="msg" id="msg" role="status"></div>
+    <p class="foot">Hasil disimpan sebagai Google Spreadsheet di folder yang sama dengan data referensi.</p>
+  </div>
+</main>
+
+<!-- Loading: menutup layar sehingga tidak ada yang bisa diklik -->
+<div class="layer show" id="overlay" role="alertdialog" aria-live="assertive" aria-busy="true">
+  <div class="dlg">
+    <div class="spin" id="spin"></div>
+    <p id="ovText" style="color:var(--text)">Memuat data...</p>
+    <div class="row" id="retryRow" hidden style="grid-template-columns:1fr"><button class="btn" id="retry" type="button">Coba lagi</button></div>
+  </div>
+</div>
+
+<!-- Konfirmasi generate ulang -->
+<div class="layer" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="dlg">
+    <h2 id="mTitle">Daftar hadir sudah dibuat</h2>
+    <p id="mDesc"></p>
+    <div class="row">
+      <button class="btn ghost" id="mNo" type="button">Batal</button>
+      <button class="btn" id="mYes" type="button">Generate ulang</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// GANTI dengan URL Web App hasil Deploy Apps Script (berakhiran /exec)
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUeiN_1_aUJsqta7TIkJSzFoqDE8KJWQmRCvdOGFNy-kj8Xq2W6rtVibLvGqOkkouW7w/exec';
+
+const $ = id => document.getElementById(id);
+const key = (k, s) => k + '|' + s;
+const semester = () => document.querySelector('input[name=semester]:checked').value;
+let guru = [], kelasList = [], hasil = {};
+
+/* ---------- util ---------- */
+async function api(params) {
+  const res = await fetch(SCRIPT_URL + '?' + new URLSearchParams(params));
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Terjadi kesalahan.');
+  return data;
+}
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function pesan(txt, cls) { const m = $('msg'); m.textContent = txt || ''; m.className = 'msg' + (cls ? ' ' + cls : ''); }
+
+// Loading: overlay menutup layar + kartu di-inert agar keyboard pun terblokir
+function sibuk(on, teks, gagal) {
+  $('overlay').classList.toggle('show', on);
+  $('card').inert = on;
+  if (teks) $('ovText').textContent = teks;
+  $('spin').hidden = !!gagal;
+  $('retryRow').hidden = !gagal;
+}
+
+function konfirmasi(tgl) {
+  return new Promise(resolve => {
+    $('mDesc').textContent = 'Dibuat pada ' + tgl + '. Generate ulang akan membuat file baru dan memperbarui tautan di sheet Hasil. File lama tidak dihapus.';
+    $('modal').classList.add('show');
+    $('card').inert = true;
+    const selesai = v => {
+      $('modal').classList.remove('show');
+      $('card').inert = false;
+      $('mYes').onclick = $('mNo').onclick = null;
+      resolve(v);
+    };
+    $('mYes').onclick = () => selesai(true);
+    $('mNo').onclick = () => selesai(false);
+    $('mNo').focus();
+  });
+}
+
+/* ---------- tampilan ---------- */
+function renderKelas() {
+  const sel = $('kelas'), cur = sel.value, s = semester();
+  sel.innerHTML = '';
+  sel.appendChild(new Option('- Pilih kelas -', ''));
+  kelasList.forEach(k => sel.appendChild(new Option(k + (hasil[key(k, s)] ? '  \u2713 sudah dibuat' : ''), k)));
+  sel.value = cur;
+  const jml = kelasList.filter(k => hasil[key(k, s)]).length;
+  $('progress').textContent = 'Semester ' + s + ': ' + jml + ' dari ' + kelasList.length + ' kelas sudah dibuat.';
+}
+
+function renderInfo() {
+  const k = $('kelas').value, box = $('info'), btn = $('btn');
+  box.textContent = '';
+  box.className = 'box';
+  btn.className = 'btn';
+  btn.textContent = 'Generate daftar hadir';
+  if (!k) return;
+  const h = hasil[key(k, semester())];
+  if (h) {
+    box.className = 'box done';
+    box.appendChild(el('div', 'tt', 'Sudah dibuat'));
+    box.appendChild(el('div', '', 'Dibuat pada ' + (h.tanggal || '-') + '.'));
+    const a = el('a', '', 'Buka daftar hadir');
+    a.href = h.url; a.target = '_blank'; a.rel = 'noopener';
+    box.appendChild(a);
+    btn.className = 'btn alt';
+    btn.textContent = 'Generate ulang';
+  } else {
+    box.className = 'box none';
+    box.appendChild(el('div', 'tt', 'Belum dibuat'));
+    box.appendChild(el('div', '', 'Isi wali kelas di bawah, lalu klik Generate.'));
+  }
+}
+
+function refresh() { pesan(''); renderKelas(); renderInfo(); }
+
+/* ---------- generate ---------- */
+async function generate(force) {
+  const kelas = $('kelas').value, s = semester();
+  const p = { action: 'generate', kelas, wali: $('wali').value.trim(), nip: $('nip').value.trim(), semester: s };
+  if (force) p.force = '1';
+  sibuk(true, 'Sedang membuat daftar hadir. Bisa sampai 1 menit, jangan tutup halaman.');
+  let d;
+  try {
+    d = await api(p);
+  } catch (e) {
+    sibuk(false);
+    return pesan('Gagal: ' + e.message, 'err');
+  }
+  hasil[key(kelas, s)] = { url: d.url, tanggal: d.tanggal };
+  sibuk(false);
+  renderKelas(); renderInfo();
+  if (d.sudahAda) {   // data di layar ternyata usang (sudah dibuat dari perangkat lain)
+    if (await konfirmasi(d.tanggal)) generate(true);
+    return;
+  }
+  pesan('Berhasil dibuat untuk ' + d.jumlahSiswa + ' siswa. Klik "Buka daftar hadir" di atas.', 'ok');
+}
+
+/* ---------- event ---------- */
+$('kelas').addEventListener('change', refresh);
+document.querySelectorAll('input[name=semester]').forEach(r => r.addEventListener('change', refresh));
+
+$('wali').addEventListener('input', () => {
+  const g = guru.find(x => x.nama.toLowerCase() === $('wali').value.trim().toLowerCase());
+  if (g) $('nip').value = g.nip;
+});
+
+$('btn').addEventListener('click', async () => {
+  pesan('');
+  const kelas = $('kelas').value;
+  if (!kelas) return pesan('Pilih kelas terlebih dahulu.', 'err');
+  if (!$('wali').value.trim()) { $('wali').focus(); return pesan('Isi nama wali kelas.', 'err'); }
+  const h = hasil[key(kelas, semester())];
+  if (h && !(await konfirmasi(h.tanggal))) return;
+  generate(!!h);
+});
+
+/* ---------- muat awal ---------- */
+async function init() {
+  sibuk(true, 'Memuat data kelas dan riwayat...');
+  try {
+    const d = await api({ action: 'init' });
+    $('tahun').textContent = d.tahun;
+    kelasList = d.kelas;
+    guru = d.guru;
+    hasil = {};
+    (d.hasil || []).forEach(h => { hasil[key(h.kelas, h.semester)] = { url: h.url, tanggal: h.tanggal }; });
+    $('daftarGuru').replaceChildren(...guru.map(g => { const o = document.createElement('option'); o.value = g.nama; return o; }));
+    renderKelas(); renderInfo();
+    sibuk(false);
+  } catch (e) {
+    sibuk(true, 'Gagal memuat data: ' + e.message, true);
+  }
+}
+$('retry').addEventListener('click', init);
+init();
+</script>
+</body>
+</html>
