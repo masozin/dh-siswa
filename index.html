@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generator Daftar Hadir Murid</title>
+<title>Daftar Hadir Murid</title>
 <style>
   :root {
     --bg:#eef1ee; --card:#ffffff; --text:#14231f; --muted:#5f6f69; --line:#d9e0dc;
@@ -33,8 +33,24 @@
   .head p { margin:4px 0 0; font-size:.92rem; opacity:.85; }
   .badge { display:inline-block; margin-top:12px; padding:4px 12px; border-radius:999px; background:rgba(255,255,255,.16); font-size:.85rem; font-weight:600; }
   .body { padding:22px 24px 26px; }
+
+  /* ---- daftar link ---- */
+  .grp { margin-bottom:22px; }
+  .grp h2 { margin:0; font-size:1rem; }
+  .grp .sub { margin:2px 0 10px; font-size:.82rem; color:var(--muted); }
+  .links { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  a.link { display:flex; flex-direction:column; gap:2px; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px;
+           color:var(--text); text-decoration:none; transition:border-color .15s, background .15s; }
+  a.link b { font-size:.98rem; }
+  a.link small { color:var(--muted); font-size:.78rem; }
+  a.link:hover, a.link:focus-visible { border-color:var(--pri); background:color-mix(in srgb, var(--pri) 10%, transparent); outline:none; }
+  .empty { padding:18px; border:1.5px dashed var(--line); border-radius:12px; color:var(--muted); text-align:center; font-size:.92rem; margin-bottom:22px; }
+
+  /* ---- form ---- */
+  .back { padding:0; margin:0 0 14px; border:0; background:none; color:var(--pri); font:inherit; font-weight:600; cursor:pointer; }
+  .back:hover { text-decoration:underline; }
+  h2.judul { margin:0 0 6px; font-size:1.1rem; }
   label.t { display:block; margin:18px 0 6px; font-size:.9rem; font-weight:600; }
-  label.t:first-child { margin-top:0; }
   .hint { font-weight:400; color:var(--muted); }
   input[type=text], select { width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:10px; font:inherit; background:transparent; color:inherit; }
   input[type=text]:focus, select:focus { outline:3px solid color-mix(in srgb, var(--pri) 35%, transparent); border-color:var(--pri); }
@@ -49,7 +65,7 @@
   .seg input:checked + span { border-color:var(--pri); background:color-mix(in srgb, var(--pri) 12%, transparent); }
   .seg input:focus-visible + span { outline:3px solid color-mix(in srgb, var(--pri) 35%, transparent); }
 
-  .box { margin-top:18px; padding:14px 16px; border-radius:12px; border:1.5px solid var(--line); background:transparent; font-size:.92rem; }
+  .box { margin-top:18px; padding:14px 16px; border-radius:12px; border:1.5px solid var(--line); font-size:.92rem; }
   .box:empty { display:none; }
   .box .tt { font-weight:700; margin-bottom:2px; }
   .box.none { background:var(--wait-bg); border-color:var(--wait-line); color:var(--wait); }
@@ -83,12 +99,23 @@
 <body>
 <main class="card" id="card">
   <header class="head">
-    <h1>Generator daftar hadir murid</h1>
+    <h1>Daftar hadir murid</h1>
     <p>SDN 01 Toto Rejo</p>
     <span class="badge">Tahun pelajaran <span id="tahun">...</span></span>
   </header>
 
-  <div class="body">
+  <!-- TAMPILAN 1: daftar link lembar absen -->
+  <section class="body" id="vHome">
+    <div id="daftar"></div>
+    <button class="btn" id="btnBaru" type="button">+ Buat lembar absen baru</button>
+    <p class="foot">Klik nama kelas untuk membuka lembar absennya.</p>
+  </section>
+
+  <!-- TAMPILAN 2: form generate -->
+  <section class="body" id="vForm" hidden>
+    <button class="back" id="btnKembali" type="button">&larr; Kembali ke daftar</button>
+    <h2 class="judul">Buat lembar absen baru</h2>
+
     <label class="t" for="semGanjil">Semester</label>
     <div class="seg">
       <label><input type="radio" name="semester" id="semGanjil" value="Ganjil" checked><span><b>Ganjil</b><small>Juli - Desember</small></span></label>
@@ -110,8 +137,8 @@
 
     <button class="btn" id="btn" type="button">Generate daftar hadir</button>
     <div class="msg" id="msg" role="status"></div>
-    <p class="foot">created with ❤️ by ozinstq</p>
-  </div>
+    <p class="foot">Hasil disimpan sebagai Google Spreadsheet di folder yang sama dengan data referensi.</p>
+  </section>
 </main>
 
 <!-- Loading: menutup layar sehingga tidak ada yang bisa diklik -->
@@ -185,7 +212,41 @@ function konfirmasi(tgl) {
   });
 }
 
-/* ---------- tampilan ---------- */
+/* ---------- tampilan 1: daftar link ---------- */
+function renderHome() {
+  const box = $('daftar');
+  box.replaceChildren();
+  const urut = k => { const i = kelasList.indexOf(k); return i < 0 ? 999 : i; };
+  let total = 0;
+  [['Ganjil', 'Juli - Desember'], ['Genap', 'Januari - Juni']].forEach(([s, rentang]) => {
+    const item = Object.values(hasil).filter(h => h.semester === s)
+      .sort((a, b) => urut(a.kelas) - urut(b.kelas) || a.kelas.localeCompare(b.kelas, 'id', { numeric: true }));
+    if (!item.length) return;
+    total += item.length;
+    const g = el('div', 'grp');
+    g.appendChild(el('h2', '', 'Semester ' + s));
+    g.appendChild(el('p', 'sub', rentang + ' \u00b7 ' + item.length + ' lembar absen'));
+    const wrap = el('div', 'links');
+    item.forEach(h => {
+      const a = el('a', 'link');
+      a.href = h.url; a.target = '_blank'; a.rel = 'noopener';
+      a.appendChild(el('b', '', h.kelas));
+      a.appendChild(el('small', '', 'Dibuat ' + String(h.tanggal || '-').split(' ')[0]));
+      wrap.appendChild(a);
+    });
+    g.appendChild(wrap);
+    box.appendChild(g);
+  });
+  if (!total) box.appendChild(el('div', 'empty', 'Belum ada lembar absen untuk tahun pelajaran ini. Klik tombol di bawah untuk membuatnya.'));
+}
+
+function tampil(v) {
+  $('vHome').hidden = v !== 'home';
+  $('vForm').hidden = v !== 'form';
+  window.scrollTo(0, 0);
+}
+
+/* ---------- tampilan 2: form ---------- */
 function renderKelas() {
   const sel = $('kelas'), cur = sel.value, s = semester();
   sel.innerHTML = '';
@@ -235,9 +296,9 @@ async function generate(force) {
     sibuk(false);
     return pesan('Gagal: ' + e.message, 'err');
   }
-  hasil[key(kelas, s)] = { url: d.url, tanggal: d.tanggal };
+  hasil[key(kelas, s)] = { kelas, semester: s, url: d.url, tanggal: d.tanggal };
   sibuk(false);
-  renderKelas(); renderInfo();
+  renderKelas(); renderInfo(); renderHome();
   if (d.sudahAda) {   // data di layar ternyata usang (sudah dibuat dari perangkat lain)
     if (await konfirmasi(d.tanggal)) generate(true);
     return;
@@ -246,6 +307,9 @@ async function generate(force) {
 }
 
 /* ---------- event ---------- */
+$('btnBaru').addEventListener('click', () => { refresh(); tampil('form'); });
+$('btnKembali').addEventListener('click', () => { renderHome(); tampil('home'); });
+
 $('kelas').addEventListener('change', refresh);
 document.querySelectorAll('input[name=semester]').forEach(r => r.addEventListener('change', refresh));
 
@@ -273,9 +337,10 @@ async function init() {
     kelasList = d.kelas;
     guru = d.guru;
     hasil = {};
-    (d.hasil || []).forEach(h => { hasil[key(h.kelas, h.semester)] = { url: h.url, tanggal: h.tanggal }; });
+    (d.hasil || []).forEach(h => { hasil[key(h.kelas, h.semester)] = { kelas: h.kelas, semester: h.semester, url: h.url, tanggal: h.tanggal }; });
     $('daftarGuru').replaceChildren(...guru.map(g => { const o = document.createElement('option'); o.value = g.nama; return o; }));
-    renderKelas(); renderInfo();
+    renderHome(); renderKelas(); renderInfo();
+    tampil('home');
     sibuk(false);
   } catch (e) {
     sibuk(true, 'Gagal memuat data: ' + e.message, true);
@@ -285,4 +350,4 @@ $('retry').addEventListener('click', init);
 init();
 </script>
 </body>
-</html> 
+</html>
