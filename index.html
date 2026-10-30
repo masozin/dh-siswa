@@ -108,7 +108,7 @@
   <section class="body" id="vHome">
     <div id="daftar"></div>
     <button class="btn" id="btnBaru" type="button">+ Buat lembar absen baru</button>
-    <p class="foot">Klik nama kelas untuk membuka lembar absennya.</p>
+    <p class="foot">Created with ❤️ by Ozinstq</p>
   </section>
 
   <!-- TAMPILAN 2: form generate -->
@@ -137,7 +137,7 @@
 
     <button class="btn" id="btn" type="button">Generate daftar hadir</button>
     <div class="msg" id="msg" role="status"></div>
-    <p class="foot">Hasil disimpan sebagai Google Spreadsheet di folder yang sama dengan data referensi.</p>
+    <p class="foot">Created with ❤️ by Ozinstq</p>
   </section>
 </main>
 
@@ -231,7 +231,7 @@ function renderHome() {
       const a = el('a', 'link');
       a.href = h.url; a.target = '_blank'; a.rel = 'noopener';
       a.appendChild(el('b', '', h.kelas));
-      a.appendChild(el('small', '', 'Dibuat ' + String(h.tanggal || '-').split(' ')[0]));
+      // a.appendChild(el('small', '', 'Dibuat ' + String(h.tanggal || '-').split(' ')[0]));
       wrap.appendChild(a);
     });
     g.appendChild(wrap);
