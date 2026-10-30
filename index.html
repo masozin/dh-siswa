@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Daftar Hadir Murid</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
 <style>
   :root {
     --bg:#eef1ee; --card:#ffffff; --text:#14231f; --muted:#5f6f69; --line:#d9e0dc;
@@ -94,6 +95,30 @@
   .spin { width:38px; height:38px; margin:0 auto 14px; border:4px solid var(--line); border-top-color:var(--pri); border-radius:50%; animation:putar .9s linear infinite; }
   @keyframes putar { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s; } }
+  /* ---- tombol spreadsheet ---- */
+.sheet-link {
+    display: block;
+    width: 100%;
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    background: transparent;
+    color: var(--pri);
+    border: 1.5px solid var(--pri);
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.4;
+}
+
+.sheet-link:hover {
+    background: color-mix(in srgb, var(--pri) 12%, transparent);
+    color: var(--pri);
+}
+
+.sheet-link .sheet-title {
+    display: block;
+    font-size: .95rem;
+    font-weight: 700;
+}
 </style>
 </head>
 <body>
@@ -106,10 +131,28 @@
 
   <!-- TAMPILAN 1: daftar link lembar absen -->
   <section class="body" id="vHome">
+
+    <!-- Tombol akses Google Spreadsheet -->
+    <a
+        class="btn sheet-link"
+        href="https://docs.google.com/spreadsheets/d/1VG5iAEOROZPxNn-RLQS3f63ODj7ocyp_-3bYyuuGDVY/edit?gid=1335968841#gid=1335968841"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Buka Spreadsheet Data Absensi"
+    >
+        <span class="sheet-title">
+            Lihat Rekap
+        </span>
+    </a>
+
     <div id="daftar"></div>
-    <button class="btn" id="btnBaru" type="button">+ Buat lembar absen baru</button>
+
+    <button class="btn" id="btnBaru" type="button">
+        + Buat lembar absen baru
+    </button>
+
     <p class="foot">Created with ❤️ by Ozinstq</p>
-  </section>
+</section>
 
   <!-- TAMPILAN 2: form generate -->
   <section class="body" id="vForm" hidden>
@@ -225,7 +268,7 @@ function renderHome() {
     total += item.length;
     const g = el('div', 'grp');
     g.appendChild(el('h2', '', 'Semester ' + s));
-    g.appendChild(el('p', 'sub', rentang + ' \u00b7 ' + item.length + ' lembar absen'));
+    g.appendChild(el('p', 'sub', rentang));
     const wrap = el('div', 'links');
     item.forEach(h => {
       const a = el('a', 'link');
