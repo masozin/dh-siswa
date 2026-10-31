@@ -47,6 +47,15 @@
   a.link:hover, a.link:focus-visible { border-color:var(--pri); background:color-mix(in srgb, var(--pri) 10%, transparent); outline:none; }
   .empty { padding:18px; border:1.5px dashed var(--line); border-radius:12px; color:var(--muted); text-align:center; font-size:.92rem; margin-bottom:22px; }
 
+  /* ---- tab semester ---- */
+  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:4px; margin-bottom:16px; border-radius:12px;
+          background:color-mix(in srgb, var(--line) 55%, transparent); }
+  .tab { display:flex; flex-direction:column; align-items:center; padding:9px 6px; border:0; border-radius:9px; background:transparent;
+         color:var(--muted); font:inherit; font-weight:600; line-height:1.3; cursor:pointer; transition:background .15s, color .15s; }
+  .tab small { font-size:.76rem; font-weight:400; }
+  .tab[aria-selected="true"] { background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.18); }
+  .tab:focus-visible { outline:3px solid color-mix(in srgb, var(--pri) 35%, transparent); }
+
   /* ---- form ---- */
   .back { padding:0; margin:0 0 14px; border:0; background:none; color:var(--pri); font:inherit; font-weight:600; cursor:pointer; }
   .back:hover { text-decoration:underline; }
@@ -145,7 +154,17 @@
         </span>
     </a>
 
-    <div id="daftar"></div>
+    <!-- Tab semester -->
+    <div class="tabs" id="tabs" role="tablist" aria-label="Pilih semester">
+      <button class="tab" id="tabGanjil" data-sem="Ganjil" role="tab" aria-selected="true" aria-controls="daftar" type="button">
+        <span>Semester Ganjil</span><small>Juli - Desember</small>
+      </button>
+      <button class="tab" id="tabGenap" data-sem="Genap" role="tab" aria-selected="false" aria-controls="daftar" type="button">
+        <span>Semester Genap</span><small>Januari - Juni</small>
+      </button>
+    </div>
+
+    <div id="daftar" role="tabpanel"></div>
 
     <button class="btn" id="btnBaru" type="button">
         + Buat lembar absen baru
@@ -212,7 +231,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMYCUALgzeA0PAWGpAD
 const $ = id => document.getElementById(id);
 const key = (k, s) => k + '|' + s;
 const semester = () => document.querySelector('input[name=semester]:checked').value;
-let guru = [], kelasList = [], hasil = {};
+let guru = [], kelasList = [], hasil = {}, tabAktif = 'Ganjil';
 
 /* ---------- util ---------- */
 async function api(params) {
@@ -255,33 +274,46 @@ function konfirmasi(tgl) {
   });
 }
 
-/* ---------- tampilan 1: daftar link ---------- */
+/* ---------- semester yang aktif saat pertama dibuka ---------- */
+// Ganjil = Juli - Desember (tahun awal), Genap = Januari - Juni (tahun akhir).
+// Sebelum tahun pelajaran dimulai -> Ganjil; setelah berakhir -> Genap (semester terakhir).
+function semesterSekarang(tahun) {
+  const t = String(tahun).split('/').map(Number);
+  if (t.length !== 2 || t.some(isNaN)) return { tab: 'Ganjil', berjalan: null };
+  const now = new Date(), ym = now.getFullYear() * 100 + now.getMonth() + 1;
+  const tab = ym >= t[1] * 100 + 1 ? 'Genap' : 'Ganjil';
+  const dalam = ym >= t[0] * 100 + 7 && ym <= t[1] * 100 + 6;
+  return { tab, berjalan: dalam ? tab : null };
+}
+
+/* ---------- tampilan 1: daftar link per tab ---------- */
 function renderHome() {
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.sem === tabAktif;
+    t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
+  });
   const box = $('daftar');
   box.replaceChildren();
   const urut = k => { const i = kelasList.indexOf(k); return i < 0 ? 999 : i; };
-  let total = 0;
-  [['Ganjil', 'Juli - Desember'], ['Genap', 'Januari - Juni']].forEach(([s, rentang]) => {
-    const item = Object.values(hasil).filter(h => h.semester === s)
-      .sort((a, b) => urut(a.kelas) - urut(b.kelas) || a.kelas.localeCompare(b.kelas, 'id', { numeric: true }));
-    if (!item.length) return;
-    total += item.length;
-    const g = el('div', 'grp');
-    g.appendChild(el('h2', '', 'Semester ' + s));
-    g.appendChild(el('p', 'sub', rentang));
-    const wrap = el('div', 'links');
-    item.forEach(h => {
-      const a = el('a', 'link');
-      a.href = h.url; a.target = '_blank'; a.rel = 'noopener';
-      a.appendChild(el('b', '', h.kelas));
-      // a.appendChild(el('small', '', 'Dibuat ' + String(h.tanggal || '-').split(' ')[0]));
-      wrap.appendChild(a);
-    });
-    g.appendChild(wrap);
-    box.appendChild(g);
+  const item = Object.values(hasil).filter(h => h.semester === tabAktif)
+    .sort((a, b) => urut(a.kelas) - urut(b.kelas) || a.kelas.localeCompare(b.kelas, 'id', { numeric: true }));
+  if (!item.length) {
+    box.appendChild(el('div', 'empty', 'Belum ada lembar absen semester ' + tabAktif + ' untuk tahun pelajaran ini. Klik tombol di bawah untuk membuatnya.'));
+    return;
+  }
+  const wrap = el('div', 'links');
+  item.forEach(h => {
+    const a = el('a', 'link');
+    a.href = h.url; a.target = '_blank'; a.rel = 'noopener';
+    a.appendChild(el('b', '', h.kelas));
+    // a.appendChild(el('small', '', 'Dibuat ' + String(h.tanggal || '-').split(' ')[0]));
+    wrap.appendChild(a);
   });
-  if (!total) box.appendChild(el('div', 'empty', 'Belum ada lembar absen untuk tahun pelajaran ini. Klik tombol di bawah untuk membuatnya.'));
+  box.appendChild(wrap);
 }
+
+function pilihTab(sem) { tabAktif = sem; renderHome(); }
 
 function tampil(v) {
   $('vHome').hidden = v !== 'home';
@@ -340,6 +372,7 @@ async function generate(force) {
     return pesan('Gagal: ' + e.message, 'err');
   }
   hasil[key(kelas, s)] = { kelas, semester: s, url: d.url, tanggal: d.tanggal };
+  tabAktif = s;   // saat kembali ke daftar, tab langsung menampilkan semester yang baru dibuat
   sibuk(false);
   renderKelas(); renderInfo(); renderHome();
   if (d.sudahAda) {   // data di layar ternyata usang (sudah dibuat dari perangkat lain)
@@ -350,7 +383,20 @@ async function generate(force) {
 }
 
 /* ---------- event ---------- */
-$('btnBaru').addEventListener('click', () => { refresh(); tampil('form'); });
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => pilihTab(t.dataset.sem)));
+$('tabs').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const sem = tabAktif === 'Ganjil' ? 'Genap' : 'Ganjil';
+  pilihTab(sem);
+  document.querySelector('.tab[data-sem=' + sem + ']').focus();
+});
+
+$('btnBaru').addEventListener('click', () => {
+  // form dibuka pada semester yang sedang dilihat di tab
+  document.querySelector('input[name=semester][value=' + tabAktif + ']').checked = true;
+  refresh();
+  tampil('form');
+});
 $('btnKembali').addEventListener('click', () => { renderHome(); tampil('home'); });
 
 $('kelas').addEventListener('change', refresh);
@@ -382,6 +428,16 @@ async function init() {
     hasil = {};
     (d.hasil || []).forEach(h => { hasil[key(h.kelas, h.semester)] = { kelas: h.kelas, semester: h.semester, url: h.url, tanggal: h.tanggal }; });
     $('daftarGuru').replaceChildren(...guru.map(g => { const o = document.createElement('option'); o.value = g.nama; return o; }));
+
+    // tab yang aktif pertama kali ditentukan dari tanggal hari ini
+    const sk = semesterSekarang(d.tahun);
+    tabAktif = sk.tab;
+    document.querySelectorAll('.tab').forEach(t => {
+      const sm = t.querySelector('small');
+      if (!t.dataset.base) t.dataset.base = sm.textContent;
+      sm.textContent = t.dataset.base;
+    });
+
     renderHome(); renderKelas(); renderInfo();
     tampil('home');
     sibuk(false);
